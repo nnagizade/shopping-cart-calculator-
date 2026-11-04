@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopping Cart Calculator</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f8fafc; color: #0f172a; }
+    h1 { text-align: center; color: #1e293b; }
+    .card { background: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .form-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+    input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; min-width: 140px; }
+    button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    button:hover { background: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f1f5f9; }
+    .receipt { font-size: 16px; line-height: 1.6; }
+    .highlight { background: #fef08a; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .search-result { background: #e0f2fe; padding: 12px; border-radius: 6px; margin-top: 10px; border-left: 4px solid #0284c7; }
+  </style>
+</head>
+<body>
+
+  <h1>Shopping Cart Calculator</h1>
+
+  <!-- Product Entry Form -->
+  <div class="card">
+    <h3>Add Product</h3>
+    <form id="productForm" class="form-group">
+      <input type="text" id="name" placeholder="Product Name" required>
+      <input type="number" id="price" placeholder="Price (AZN)" step="0.01" min="0" required>
+      <input type="number" id="quantity" placeholder="Quantity" min="1" required>
+      <button type="submit">Add Item</button>
+    </form>
+  </div>
+
+  <!-- Cart Table -->
+  <div class="card">
+    <h3>Cart Items</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Price</th>
+          <th>Qty</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody id="cartTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Receipt & Summary -->
+  <div class="card receipt">
+    <h3>Order Receipt</h3>
+    <p>Subtotal: <span id="subtotalVal">0.00</span> AZN</p>
+    <p>Discount Rate: <span id="discountRateVal">0</span>%</p>
+    <p>Discount Amount: -<span id="discountAmtVal">0.00</span> AZN</p>
+    <hr>
+    <p><strong>Total: <span id="totalVal">0.00</span> AZN</strong></p>
+    <p>Most Expensive Item: <span id="maxProduct" class="highlight">None</span></p>
+  </div>
+
+  <!-- Product Search -->
+  <div class="card">
+    <h3>Search Product</h3>
+    <div class="form-group">
+      <input type="text" id="searchInput" placeholder="Enter product name to search...">
+      <button type="button" onclick="searchProduct()">Search</button>
+    </div>
+    <div id="searchOutput"></div>
+  </div>
+
+  <script>
+    const products = [];
+
+    document.getElementById('productForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const price = parseFloat(document.getElementById('price').value);
+      const quantity = parseInt(document.getElementById('quantity').value);
+
+      products.push({ name, price, quantity });
+      updateUI();
+
+      this.reset();
+      document.getElementById('name').focus();
+    });
+
+    function updateUI() {
+      const tbody = document.getElementById('cartTable');
+      tbody.innerHTML = '';
+
+      let subtotal = 0;
+      let maxProduct = null;
+
+      products.forEach(p => {
+        const itemSubtotal = p.price * p.quantity;
+        subtotal += itemSubtotal;
+
+        if (!maxProduct || p.price > maxProduct.price) {
+          maxProduct = p;
+        }
+
+        const row = `<tr>
+          <td>${p.name}</td>
+          <td>${p.price.toFixed(2)} AZN</td>
+          <td>${p.quantity}</td>
+          <td>${itemSubtotal.toFixed(2)} AZN</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+
+      // Discount calculation rules
+      let discountRate = 0;
+      if (subtotal > 1000) {
+        discountRate = 0.10;
+      } else if (subtotal > 500) {
+        discountRate = 0.05;
+      }
+
+      const discountAmt = subtotal * discountRate;
+      const finalTotal = subtotal - discountAmt;
+
+      document.getElementById('subtotalVal').textContent = subtotal.toFixed(2);
+      document.getElementById('discountRateVal').textContent = (discountRate * 100);
+      document.getElementById('discountAmtVal').textContent = discountAmt.toFixed(2);
+      document.getElementById('totalVal').textContent = finalTotal.toFixed(2);
+      document.getElementById('maxProduct').textContent = maxProduct 
+        ? `${maxProduct.name} (${maxProduct.price.toFixed(2)} AZN)` 
+        : 'None';
+    }
+
+    function searchProduct() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const output = document.getElementById('searchOutput');
+
+      if (!query) {
+        output.innerHTML = '';
+        return;
+      }
+
+      const found = products.find(p => p.name.toLowerCase() === query);
+
+      if (found) {
+        output.innerHTML = `<div class="search-result">
+          <strong>Found:</strong> ${found.name} | Price: ${found.price.toFixed(2)} AZN | Qty: ${found.quantity} | Total: ${(found.price * found.quantity).toFixed(2)} AZN
+        </div>`;
+      } else {
+        output.innerHTML = `<div class="search-result" style="border-left-color: #ef4444; background: #fef2f2;">
+          Product "${query}" not found in cart.
+        </div>`;
+      }
+    }
+  </script>
+</body>
+</html>
